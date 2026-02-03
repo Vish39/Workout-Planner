@@ -30,3 +30,7 @@ Time efficiency for busy users
 Safety modifications for injuries
 Progressive overload for muscle building
 Metabolic conditioning for fat loss
+
+
+https://github.com/user-attachments/assets/7e4ba506-4229-4261-a568-be14f33156dd
+
