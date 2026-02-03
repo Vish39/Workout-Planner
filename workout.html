@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitGenius - AI Workout Planner</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-green: #ccff00;
+            --electric-purple: #8b5cf6;
+            --dark-bg: #0a0a0a;
+            --card-bg: #141414;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent-orange: #f97316;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(204, 255, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(249, 115, 22, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.03;
+            z-index: 1;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-green) 0%, var(--electric-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -2px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            margin: 2rem 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-green), var(--electric-purple));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
+        }
+
+        .step-container {
+            display: none;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .step-container.active {
+            display: block;
+        }
+
+        .question-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 2.5rem;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: rgba(204, 255, 0, 0.3);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--neon-green), var(--electric-purple));
+            color: var(--dark-bg);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .option-card {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, transparent 0%, rgba(204, 255, 0, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .option-card:hover {
+            border-color: var(--neon-green);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(204, 255, 0, 0.1);
+        }
+
+        .option-card.selected {
+            border-color: var(--neon-green);
+            background: rgba(204, 255, 0, 0.1);
+        }
+
+        .option-card.selected::before {
+            opacity: 1;
+        }
+
+        .option-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .option-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 1.1rem;
+        }
+
+        .option-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .input-group {
+            margin-top: 1.5rem;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--neon-green);
+            background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 0 3px rgba(204, 255, 0, 0.1);
+        }
+
+        .slider-container {
+            margin: 2rem 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .slider-value {
+            color: var(--neon-green);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(204, 255, 0, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            justify-content: space-between;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-green) 0%, #a3e635 100%);
+            color: var(--dark-bg);
+            box-shadow: 0 4px 20px rgba(204, 255, 0, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(204, 255, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Analysis Animation */
+        .analysis-screen {
+            display: none;
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .analysis-screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .brain-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 3rem;
+        }
+
+        .brain-icon {
+            font-size: 6rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+
+        .orbit {
+            position: absolute;
+            border: 2px solid rgba(204, 255, 0, 0.3);
+            border-radius: 50%;
+            animation: rotate 4s linear infinite;
+        }
+
+        .orbit-1 {
+            width: 100%;
+            height: 100%;
+            animation-duration: 8s;
+        }
+
+        .orbit-2 {
+            width: 140%;
+            height: 140%;
+            top: -20%;
+            left: -20%;
+            animation-duration: 12s;
+            animation-direction: reverse;
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .orbit-3 {
+            width: 180%;
+            height: 180%;
+            top: -40%;
+            left: -40%;
+            animation-duration: 16s;
+            border-color: rgba(249, 115, 22, 0.3);
+        }
+
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .analysis-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            min-height: 2rem;
+        }
+
+        .analysis-subtext {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.2em;
+            background: var(--neon-green);
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        /* Results Screen */
+        .results-screen {
+            display: none;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .results-screen.active {
+            display: block;
+        }
+
+        .plan-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(204, 255, 0, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-radius: 24px;
+            border: 1px solid rgba(204, 255, 0, 0.2);
+        }
+
+        .plan-type {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--neon-green) 0%, var(--electric-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .plan-summary {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-green);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--neon-green);
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .workout-schedule {
+            margin-top: 3rem;
+        }
+
+        .schedule-header {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .day-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .day-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: var(--neon-green);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .day-card:hover {
+            transform: translateX(10px);
+            border-color: rgba(204, 255, 0, 0.3);
+        }
+
+        .day-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .day-card.rest-day::before {
+            background: var(--text-secondary);
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .day-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .day-type {
+            background: rgba(204, 255, 0, 0.15);
+            color: var(--neon-green);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .day-type.rest {
+            background: rgba(161, 161, 170, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .exercises-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .exercise-tag {
+            background: rgba(255,255,255,0.05);
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tips-section {
+            margin-top: 3rem;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%);
+            border-radius: 24px;
+            padding: 2rem;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .tips-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--electric-purple);
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+
+        .tip-icon {
+            color: var(--neon-green);
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .start-over-btn {
+            margin-top: 3rem;
+            text-align: center;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .question-card {
+                padding: 1.5rem;
+            }
+            
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column-reverse;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    <div class="noise"></div>
+
+    <div class="container">
+        <header>
+            <h1 class="logo">FitGenius</h1>
+            <p class="tagline">AI-Powered Workout Planning Based on Your Lifestyle</p>
+        </header>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- Step 1: Fitness Goal -->
+        <div class="step-container active" id="step1">
+            <div class="question-card">
+                <span class="step-number">Step 1 of 6</span>
+                <h2>What's your primary fitness goal?</h2>
+                <p class="subtitle">Select the goal that matters most to you right now</p>
+                
+                <div class="options-grid">
+                    <div class="option-card" onclick="selectOption(1, 'lose_weight')">
+                        <span class="option-icon">🔥</span>
+                        <div class="option-title">Lose Weight</div>
+                        <div class="option-desc">Burn fat and improve body composition</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(1, 'build_muscle')">
+                        <span class="option-icon">💪</span>
+                        <div class="option-title">Build Muscle</div>
+                        <div class="option-desc">Increase strength and muscle mass</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(1, 'endurance')">
+                        <span class="option-icon">🏃</span>
+                        <div class="option-title">Improve Endurance</div>
+                        <div class="option-desc">Boost stamina and cardiovascular health</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(1, 'maintenance')">
+                        <span class="option-icon">⚖️</span>
+                        <div class="option-title">General Health</div>
+                        <div class="option-desc">Stay active and maintain fitness</div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <div></div>
+                <button class="btn btn-primary" id="btn1" onclick="nextStep(2)" disabled>
+                    Continue →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Current Activity Level -->
+        <div class="step-container" id="step2">
+            <div class="question-card">
+                <span class="step-number">Step 2 of 6</span>
+                <h2>How active are you currently?</h2>
+                <p class="subtitle">Be honest—this helps us prevent injury and burnout</p>
+                
+                <div class="options-grid">
+                    <div class="option-card" onclick="selectOption(2, 'sedentary')">
+                        <span class="option-icon">🛋️</span>
+                        <div class="option-title">Sedentary</div>
+                        <div class="option-desc">Little to no exercise, desk job</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(2, 'light')">
+                        <span class="option-icon">🚶</span>
+                        <div class="option-title">Lightly Active</div>
+                        <div class="option-desc">1-2 days/week light exercise</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(2, 'moderate')">
+                        <span class="option-icon">🏋️</span>
+                        <div class="option-title">Moderately Active</div>
+                        <div class="option-desc">3-4 days/week regular exercise</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(2, 'very')">
+                        <span class="option-icon">🔥</span>
+                        <div class="option-title">Very Active</div>
+                        <div class="option-desc">5+ days/week intense training</div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(1)">← Back</button>
+                <button class="btn btn-primary" id="btn2" onclick="nextStep(3)" disabled>
+                    Continue →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Daily Schedule -->
+        <div class="step-container" id="step3">
+            <div class="question-card">
+                <span class="step-number">Step 3 of 6</span>
+                <h2>What's your daily schedule like?</h2>
+                <p class="subtitle">We'll optimize workout timing based on your energy levels</p>
+                
+                <div class="options-grid">
+                    <div class="option-card" onclick="selectOption(3, 'early_bird')">
+                        <span class="option-icon">🌅</span>
+                        <div class="option-title">Early Bird</div>
+                        <div class="option-desc">Wake up 5-7 AM, most energy in morning</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(3, 'standard')">
+                        <span class="option-icon">☀️</span>
+                        <div class="option-title">Standard</div>
+                        <div class="option-desc">Wake up 7-9 AM, regular 9-5 schedule</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(3, 'night_owl')">
+                        <span class="option-icon">🌙</span>
+                        <div class="option-title">Night Owl</div>
+                        <div class="option-desc">Wake up 9+ AM, more energy in evening</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(3, 'shift_worker')">
+                        <span class="option-icon">🔄</span>
+                        <div class="option-title">Shift Worker</div>
+                        <div class="option-desc">Irregular schedule, rotating shifts</div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(2)">← Back</button>
+                <button class="btn btn-primary" id="btn3" onclick="nextStep(4)" disabled>
+                    Continue →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Time Available -->
+        <div class="step-container" id="step4">
+            <div class="question-card">
+                <span class="step-number">Step 4 of 6</span>
+                <h2>How much time can you dedicate daily?</h2>
+                <p class="subtitle">Include warm-up and cool-down time</p>
+                
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Available Time</span>
+                        <span class="slider-value" id="timeValue">45 minutes</span>
+                    </div>
+                    <input type="range" min="15" max="120" value="45" step="15" 
+                           id="timeSlider" oninput="updateTimeValue(this.value)">
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-secondary);">
+                        <span>15 min</span>
+                        <span>120 min</span>
+                    </div>
+                </div>
+
+                <div class="options-grid" style="margin-top: 2rem;">
+                    <div class="option-card" onclick="selectOption(4, 'home')">
+                        <span class="option-icon">🏠</span>
+                        <div class="option-title">Home Workouts</div>
+                        <div class="option-desc">No equipment or minimal setup</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(4, 'gym')">
+                        <span class="option-icon">🏋️</span>
+                        <div class="option-title">Gim Access</div>
+                        <div class="option-desc">Full equipment available</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(4, 'mixed')">
+                        <span class="option-icon">🔄</span>
+                        <div class="option-title">Mixed</div>
+                        <div class="option-desc">Both home and gym options</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(4, 'outdoor')">
+                        <span class="option-icon">🌳</span>
+                        <div class="option-title">Outdoor</div>
+                        <div class="option-desc">Parks, running trails, calisthenics</div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(3)">← Back</button>
+                <button class="btn btn-primary" id="btn4" onclick="nextStep(5)" disabled>
+                    Continue →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Physical Constraints -->
+        <div class="step-container" id="step5">
+            <div class="question-card">
+                <span class="step-number">Step 5 of 6</span>
+                <h2>Any physical considerations?</h2>
+                <p class="subtitle">Help us tailor safe exercises for you</p>
+                
+                <div class="options-grid">
+                    <div class="option-card" onclick="toggleMultiOption(5, 'none', this)">
+                        <span class="option-icon">✅</span>
+                        <div class="option-title">No Limitations</div>
+                        <div class="option-desc">Full range of motion, no injuries</div>
+                    </div>
+                    <div class="option-card" onclick="toggleMultiOption(5, 'back_issues', this)">
+                        <span class="option-icon">🦴</span>
+                        <div class="option-title">Back Issues</div>
+                        <div class="option-desc">Lower back pain or sensitivity</div>
+                    </div>
+                    <div class="option-card" onclick="toggleMultiOption(5, 'knee_issues', this)">
+                        <span class="option-icon">🦵</span>
+                        <div class="option-title">Knee/Joint Issues</div>
+                        <div class="option-desc">Knee pain or joint limitations</div>
+                    </div>
+                    <div class="option-card" onclick="toggleMultiOption(5, 'shoulder_issues', this)">
+                        <span class="option-icon">💪</span>
+                        <div class="option-title">Shoulder Issues</div>
+                        <div class="option-desc">Shoulder pain or mobility limits</div>
+                    </div>
+                    <div class="option-card" onclick="toggleMultiOption(5, 'beginner', this)">
+                        <span class="option-icon">🌱</span>
+                        <div class="option-title">Complete Beginner</div>
+                        <div class="option-desc">New to structured exercise</div>
+                    </div>
+                    <div class="option-card" onclick="toggleMultiOption(5, 'time_limited', this)">
+                        <span class="option-icon">⏰</span>
+                        <div class="option-title">Very Time Limited</div>
+                        <div class="option-desc">Need maximum efficiency</div>
+                    </div>
+                </div>
+                <input type="hidden" id="constraintsInput" value="">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(4)">← Back</button>
+                <button class="btn btn-primary" id="btn5" onclick="nextStep(6)" disabled>
+                    Continue →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 6: Work Preferences -->
+        <div class="step-container" id="step6">
+            <div class="question-card">
+                <span class="step-number">Step 6 of 6</span>
+                <h2>Workout style preference?</h2>
+                <p class="subtitle">What motivates you to show up?</p>
+                
+                <div class="options-grid">
+                    <div class="option-card" onclick="selectOption(6, 'structured')">
+                        <span class="option-icon">📋</span>
+                        <div class="option-title">Structured & Planned</div>
+                        <div class="option-desc">Exact exercises, sets, reps specified</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(6, 'flexible')">
+                        <span class="option-icon">🎯</span>
+                        <div class="option-title">Flexible & Intuitive</div>
+                        <div class="option-desc">Guidelines with freedom to choose</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(6, 'class_based')">
+                        <span class="option-icon">👥</span>
+                        <div class="option-title">Class Style</div>
+                        <div class="option-desc">Follow-along routines, video style</div>
+                    </div>
+                    <div class="option-card" onclick="selectOption(6, 'challenge')">
+                        <span class="option-icon">🏆</span>
+                        <div class="option-title">Challenge Based</div>
+                        <div class="option-desc">Daily challenges, gamified approach</div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(5)">← Back</button>
+                <button class="btn btn-primary" id="btn6" onclick="generatePlan()" disabled>
+                    Generate My Plan ✨
+                </button>
+            </div>
+        </div>
+
+        <!-- Analysis Screen -->
+        <div class="analysis-screen" id="analysisScreen">
+            <div class="brain-container">
+                <div class="orbit orbit-1"></div>
+                <div class="orbit orbit-2"></div>
+                <div class="orbit orbit-3"></div>
+                <div class="particle" style="top: 0; left: 50%;"></div>
+                <div class="particle" style="bottom: 0; left: 50%; animation-delay: 1s;"></div>
+                <div class="particle" style="top: 50%; left: 0; animation-delay: 2s;"></div>
+                <div class="particle" style="top: 50%; right: 0; animation-delay: 3s;"></div>
+                <div class="brain-icon">🧠</div>
+            </div>
+            <div class="analysis-text" id="analysisText">
+                Analyzing your lifestyle patterns<span class="typing-cursor"></span>
+            </div>
+            <div class="analysis-subtext" id="analysisSubtext">
+                Processing daily routine, energy levels, and constraints...
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div class="results-screen" id="resultsScreen">
+            <div class="plan-header">
+                <div class="plan-type" id="planType">Hybrid Strength Protocol</div>
+                <p class="plan-summary" id="planSummary">
+                    Based on your early morning availability and fat loss goals, this plan combines fasted cardio with evening strength training for maximum results.
+                </p>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statDays">5</div>
+                        <div class="stat-label">Days/Week</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statDuration">45</div>
+                        <div class="stat-label">Min/Session</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statIntensity">Med</div>
+                        <div class="stat-label">Intensity</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statFocus">Full</div>
+                        <div class="stat-label">Body Focus</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="workout-schedule">
+                <h3 class="schedule-header">📅 Your Weekly Schedule</h3>
+                <div id="scheduleContainer">
+                    <!-- Generated dynamically -->
+                </div>
+            </div>
+
+            <div class="tips-section">
+                <h3 class="tips-title">💡 Pro Tips for Your Routine</h3>
+                <div id="tipsContainer">
+                    <!-- Generated dynamically -->
+                </div>
+            </div>
+
+            <div class="start-over-btn">
+                <button class="btn btn-secondary" onclick="location.reload()">
+                    🔄 Create New Plan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        const userData = {
+            goal: null,
+            activityLevel: null,
+            schedule: null,
+            timeAvailable: 45,
+            location: null,
+            constraints: [],
+            style: null
+        };
+
+        let currentStep = 1;
+        const totalSteps = 6;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateProgress();
+        });
+
+        function updateProgress() {
+            const progress = ((currentStep - 1) / totalSteps) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            if (currentStep > 1) {
+                document.getElementById('progressBar').style.display = 'block';
+            }
+        }
+
+        function selectOption(step, value) {
+            // Remove selected class from all options in this step
+            const container = document.getElementById(`step${step}`);
+            container.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked card
+            event.currentTarget.classList.add('selected');
+            
+            // Store value
+            switch(step) {
+                case 1: userData.goal = value; break;
+                case 2: userData.activityLevel = value; break;
+                case 3: userData.schedule = value; break;
+                case 4: userData.location = value; break;
+                case 6: userData.style = value; break;
+            }
+            
+            // Enable continue button
+            document.getElementById(`btn${step}`).disabled = false;
+        }
+
+        function toggleMultiOption(step, value, element) {
+            // Handle "none" specially - deselect others
+            if (value === 'none') {
+                document.getElementById(`step${step}`).querySelectorAll('.option-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                element.classList.add('selected');
+                userData.constraints = ['none'];
+                document.getElementById('constraintsInput').value = 'none';
+                document.getElementById(`btn${step}`).disabled = false;
+                return;
+            }
+            
+            // If "none" was selected, remove it
+            const noneCard = Array.from(document.getElementById(`step${step}`).querySelectorAll('.option-card'))
+                .find(card => card.onclick.toString().includes('none'));
+            if (noneCard) noneCard.classList.remove('selected');
+            
+            // Toggle current selection
+            element.classList.toggle('selected');
+            
+            // Update array
+            if (element.classList.contains('selected')) {
+                userData.constraints = userData.constraints.filter(c => c !== 'none');
+                userData.constraints.push(value);
+            } else {
+                userData.constraints = userData.constraints.filter(c => c !== value);
+            }
+            
+            document.getElementById('constraintsInput').value = userData.constraints.join(',');
+            document.getElementById(`btn${step}`).disabled = userData.constraints.length === 0;
+        }
+
+        function updateTimeValue(value) {
+            userData.timeAvailable = parseInt(value);
+            document.getElementById('timeValue').textContent = value + ' minutes';
+            
+            // Check if location is selected to enable button
+            if (userData.location) {
+                document.getElementById('btn4').disabled = false;
+            }
+        }
+
+        function nextStep(step) {
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            currentStep = step;
+            document.getElementById(`step${currentStep}`).classList.add('active');
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function prevStep(step) {
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            currentStep = step;
+            document.getElementById(`step${currentStep}`).classList.add('active');
+            updateProgress();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function generatePlan() {
+            // Hide last step, show analysis
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('analysisScreen').classList.add('active');
+            
+            // Analysis animation sequence
+            const texts = [
+                "Analyzing your lifestyle patterns",
+                "Calculating optimal workout timing",
+                "Matching exercises to your constraints",
+                "Building your personalized protocol",
+                "Finalizing your fitness blueprint"
+            ];
+            
+            let i = 0;
+            const textElement = document.getElementById('analysisText');
+            const subtextElement = document.getElementById('analysisSubtext');
+            
+            const interval = setInterval(() => {
+                i++;
+                if (i < texts.length) {
+                    textElement.innerHTML = texts[i] + '<span class="typing-cursor"></span>';
+                    
+                    // Update subtext based on stage
+                    const subtexts = [
+                        "Processing daily routine, energy levels, and constraints...",
+                        "Aligning with your circadian rhythm and work schedule...",
+                        "Filtering exercises for safety and effectiveness...",
+                        "Balancing volume, intensity, and recovery...",
+                        "Optimizing for long-term adherence..."
+                    ];
+                    subtextElement.textContent = subtexts[i];
+                } else {
+                    clearInterval(interval);
+                    setTimeout(showResults, 800);
+                }
+            }, 1200);
+        }
+
+        function showResults() {
+            document.getElementById('analysisScreen').classList.remove('active');
+            document.getElementById('resultsScreen').classList.add('active');
+            
+            // Generate the actual plan
+            const plan = createWorkoutPlan();
+            renderPlan(plan);
+        }
+
+        function createWorkoutPlan() {
+            // Determine plan characteristics based on user data
+            const plan = {
+                name: '',
+                summary: '',
+                daysPerWeek: 0,
+                duration: userData.timeAvailable,
+                intensity: '',
+                schedule: [],
+                tips: []
+            };
+
+            // Plan naming and structure based on goal
+            switch(userData.goal) {
+                case 'lose_weight':
+                    plan.name = 'Metabolic Burn Protocol';
+                    plan.summary = `High-frequency training optimized for your ${userData.schedule.replace('_', ' ')} lifestyle. Combines strength training with metabolic conditioning to maximize calorie burn while preserving muscle.`;
+                    plan.daysPerWeek = userData.activityLevel === 'sedentary' ? 4 : 5;
+                    plan.intensity = 'High';
+                    break;
+                case 'build_muscle':
+                    plan.name = 'Hypertrophy Focus System';
+                    plan.summary = `Progressive overload program designed for ${userData.timeAvailable}-minute sessions. Emphasizes compound movements and adequate volume for muscle growth.`;
+                    plan.daysPerWeek = userData.timeAvailable < 30 ? 6 : 4;
+                    plan.intensity = 'Moderate-High';
+                    break;
+                case 'endurance':
+                    plan.name = 'Cardiovascular Base Builder';
+                    plan.summary = `Zone 2 and interval training mixed with functional strength. Perfect for improving stamina without compromising your busy schedule.`;
+                    plan.daysPerWeek = 4;
+                    plan.intensity = 'Moderate';
+                    break;
+                case 'maintenance':
+                    plan.name = 'Sustainable Fitness Lifestyle';
+                    plan.summary = `Balanced approach combining strength, mobility, and cardio. Designed for long-term consistency rather than extreme results.`;
+                    plan.daysPerWeek = 3;
+                    plan.intensity = 'Moderate';
+                    break;
+            }
+
+            // Adjust for constraints
+            if (userData.constraints.includes('time_limited')) {
+                plan.daysPerWeek = Math.max(3, plan.daysPerWeek);
+                plan.intensity = 'High';
+            }
+
+            // Generate weekly schedule
+            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const workoutTypes = generateWorkoutTypes(plan.daysPerWeek, userData);
+            
+            let workoutIndex = 0;
+            days.forEach((day, index) => {
+                // Skip rest days based on frequency
+                const isRestDay = shouldBeRestDay(index, plan.daysPerWeek, userData.schedule);
+                
+                if (isRestDay) {
+                    plan.schedule.push({
+                        day: day,
+                        type: 'Rest & Recovery',
+                        isRest: true,
+                        exercises: ['Light walking', 'Stretching', 'Hydration focus']
+                    });
+                } else {
+                    const workout = workoutTypes[workoutIndex % workoutTypes.length];
+                    plan.schedule.push({
+                        day: day,
+                        type: workout.name,
+                        isRest: false,
+                        focus: workout.focus,
+                        exercises: getExercisesForWorkout(workout, userData)
+                    });
+                    workoutIndex++;
+                }
+            });
+
+            // Generate tips
+            plan.tips = generateTips(userData);
+
+            return plan;
+        }
+
+        function generateWorkoutTypes(frequency, userData) {
+            const types = [];
+            
+            if (userData.goal === 'build_muscle') {
+                if (frequency === 4) {
+                    types.push(
+                        { name: 'Upper Body Power', focus: 'Chest, Back, Shoulders' },
+                        { name: 'Lower Body Strength', focus: 'Quads, Hamstrings, Glutes' },
+                        { name: 'Upper Body Hypertrophy', focus: 'Arms, Delts, Back width' },
+                        { name: 'Lower Body & Core', focus: 'Posterior chain, Abs' }
+                    );
+                } else {
+                    types.push(
+                        { name: 'Push (Chest/Shoulders/Triceps)', focus: 'Pressing movements' },
+                        { name: 'Pull (Back/Biceps)', focus: 'Pulling movements' },
+                        { name: 'Legs (Quads/Hams/Glutes)', focus: 'Lower body' }
+                    );
+                }
+            } else if (userData.goal === 'lose_weight') {
+                types.push(
+                    { name: 'Full Body Strength', focus: 'Compound lifts' },
+                    { name: 'HIIT Cardio', focus: 'High intensity intervals' },
+                    { name: 'Metabolic Circuit', focus: 'Density training' },
+                    { name: 'Active Recovery', focus: 'Mobility & flow' }
+                );
+            } else if (userData.goal === 'endurance') {
+                types.push(
+                    { name: 'Zone 2 Cardio', focus: 'Steady state' },
+                    { name: 'Tempo Run/Ride', focus: 'Lactate threshold' },
+                    { name: 'Strength Endurance', focus: 'Muscular endurance' },
+                    { name: 'Intervals', focus: 'VO2 max' }
+                );
+            } else {
+                types.push(
+                    { name: 'Full Body Strength', focus: 'Major movement patterns' },
+                    { name: 'Cardio & Core', focus: 'Heart health & stability' },
+                    { name: 'Mobility & Flow', focus: 'Movement quality' }
+                );
+            }
+            
+            return types;
+        }
+
+        function shouldBeRestDay(dayIndex, frequency, schedule) {
+            // Distribute rest days based on frequency
+            const restDays = 7 - frequency;
+            const restDayIndices = [];
+            
+            // Smart rest day placement based on chronotype
+            if (schedule === 'early_bird') {
+                // Rest Sunday, maybe Wednesday
+                restDayIndices.push(6);
+                if (restDays > 1) restDayIndices.push(2);
+            } else if (schedule === 'night_owl') {
+                // Rest Monday, maybe Thursday
+                restDayIndices.push(0);
+                if (restDays > 1) restDayIndices.push(3);
+            } else {
+                // Standard: Weekend rest or spread out
+                restDayIndices.push(5, 6);
+            }
+            
+            return restDayIndices.includes(dayIndex);
+        }
+
+        function getExercisesForWorkout(workout, userData) {
+            const exercises = [];
+            const constraints = userData.constraints;
+            const location = userData.location;
+            const time = userData.timeAvailable;
+            
+            // Filter based on constraints
+            const hasBackIssues = constraints.includes('back_issues');
+            const hasKneeIssues = constraints.includes('knee_issues');
+            const hasShoulderIssues = constraints.includes('shoulder_issues');
+            const isBeginner = constraints.includes('beginner');
+            
+            // Sample exercise database
+            const exerciseDB = {
+                'Upper Body Power': [
+                    !hasShoulderIssues && 'Bench Press',
+                    !hasBackIssues && 'Barbell Row',
+                    'Overhead Press',
+                    'Weighted Pull-ups',
+                    'Incline Dumbbell Press'
+                ].filter(Boolean),
+                'Lower Body Strength': [
+                    !hasKneeIssues && 'Squats',
+                    !hasBackIssues && 'Deadlifts',
+                    'Leg Press',
+                    'Walking Lunges',
+                    'Calf Raises'
+                ].filter(Boolean),
+                'HIIT Cardio': [
+                    'Burpees',
+                    !hasKneeIssues && 'Jump Squats',
+                    'Mountain Climbers',
+                    'High Knees',
+                    'Box Jumps'
+                ].filter(Boolean),
+                'Full Body Strength': [
+                    'Goblet Squats',
+                    'Push-ups',
+                    !hasBackIssues && 'Kettlebell Swings',
+                    'Rows',
+                    'Plank'
+                ].filter(Boolean)
+            };
+            
+            // Get exercises for this workout type or default
+            let available = exerciseDB[workout.name] || ['Squats', 'Push-ups', 'Rows', 'Lunges', 'Plank'];
+            
+            // Adjust for location
+            if (location === 'home') {
+                available = available.map(ex => ex.replace('Barbell', 'Dumbbell').replace('Bench Press', 'Push-ups'));
+            }
+            
+            // Select 4-6 exercises based on time
+            const numExercises = time < 30 ? 3 : time < 60 ? 4 : 5;
+            return available.slice(0, numExercises);
+        }
+
+        function generateTips(userData) {
+            const tips = [];
+            
+            // Schedule-based tips
+            if (userData.schedule === 'early_bird') {
+                tips.push({
+                    icon: '⏰',
+                    text: 'Prep your workout clothes the night before. Morning consistency is key for early risers.'
+                });
+                tips.push({
+                    icon: '🍳',
+                    text: 'Consider fasted cardio for fat loss, but have a protein shake ready for post-workout.'
+                });
+            } else if (userData.schedule === 'night_owl') {
+                tips.push({
+                    icon: '🌙',
+                    text: 'Use evening workouts to decompress, but finish 2 hours before bed for optimal sleep.'
+                });
+            }
+            
+            // Constraint-based tips
+            if (userData.constraints.includes('time_limited')) {
+                tips.push({
+                    icon: '⚡',
+                    text: 'Superset exercises to save time: pair upper body with lower body moves.'
+                });
+            }
+            
+            if (userData.constraints.includes('beginner')) {
+                tips.push({
+                    icon: '📈',
+                    text: 'Focus on form first. Add weight only when you can perform 12 perfect reps.'
+                });
+            }
+            
+            // Goal-based tips
+            if (userData.goal === 'lose_weight') {
+                tips.push({
+                    icon: '🥗',
+                    text: 'Nutrition is 80% of fat loss. Prioritize protein and maintain a moderate caloric deficit.'
+                });
+            } else if (userData.goal === 'build_muscle') {
+                tips.push({
+                    icon: '😴',
+                    text: 'Muscles grow during rest. Aim for 7-9 hours of sleep and take rest days seriously.'
+                });
+            }
+            
+            return tips;
+        }
+
+        function renderPlan(plan) {
+            // Update header
+            document.getElementById('planType').textContent = plan.name;
+            document.getElementById('planSummary').textContent = plan.summary;
+            
+            // Update stats
+            document.getElementById('statDays').textContent = plan.daysPerWeek;
+            document.getElementById('statDuration').textContent = plan.duration;
+            document.getElementById('statIntensity').textContent = plan.intensity;
+            document.getElementById('statFocus').textContent = userData.goal === 'build_muscle' ? 'Hypertrophy' : 
+                                                              userData.goal === 'lose_weight' ? 'Fat Loss' : 
+                                                              userData.goal === 'endurance' ? 'Stamina' : 'Health';
+            
+            // Render schedule
+            const scheduleContainer = document.getElementById('scheduleContainer');
+            scheduleContainer.innerHTML = '';
+            
+            plan.schedule.forEach((day, index) => {
+                const dayCard = document.createElement('div');
+                dayCard.className = `day-card ${day.isRest ? 'rest-day' : ''}`;
+                dayCard.style.animationDelay = `${index * 0.1}s`;
+                
+                const exercisesHtml = day.isRest 
+                    ? `<div style="color: var(--text-secondary); font-size: 0.9rem;">${day.exercises.join(' • ')}</div>`
+                    : `<div class="exercises-list">
+                        ${day.exercises.map(ex => `<span class="exercise-tag">${ex}</span>`).join('')}
+                       </div>
+                       ${day.focus ? `<div style="margin-top: 0.5rem; color: var(--neon-green); font-size: 0.85rem;">Focus: ${day.focus}</div>` : ''}`;
+                
+                dayCard.innerHTML = `
+                    <div class="day-header">
+                        <span class="day-name">${day.day}</span>
+                        <span class="day-type ${day.isRest ? 'rest' : ''}">${day.type}</span>
+                    </div>
+                    ${exercisesHtml}
+                `;
+                
+                scheduleContainer.appendChild(dayCard);
+            });
+            
+            // Render tips
+            const tipsContainer = document.getElementById('tipsContainer');
+            tipsContainer.innerHTML = '';
+            
+            plan.tips.forEach(tip => {
+                const tipElement = document.createElement('div');
+                tipElement.className = 'tip-item';
+                tipElement.innerHTML = `
+                    <span class="tip-icon">${tip.icon}</span>
+                    <span>${tip.text}</span>
+                `;
+                tipsContainer.appendChild(tipElement);
+            });
+        }
+    </script>
+</body>
+</html>
